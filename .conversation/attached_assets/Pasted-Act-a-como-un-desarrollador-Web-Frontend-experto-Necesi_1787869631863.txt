@@ -1,0 +1,58 @@
+Actúa como un desarrollador Web Frontend experto. Necesito que crees una web estilo Mercado Libre completa, moderna y responsive para "Growth Store", una gran tienda de artículos importados multirrubro (tecnología, hogar, bazar, juguetes, termos, etc.).
+
+1. ESTILOS Y DISEÑO (Variables CSS)
+Fondo general (Dark Mode): #171A18
+
+Color primario (Precios, botones de acción): #B7D84B
+
+Color secundario (Header, sidebar): #3E6B4F
+
+Texto principal: #F5F3ED
+
+Bordes y textos secundarios: #8A918B
+
+2. MENSAJES CLAVE Y LOGÍSTICA
+En el Header (barra superior) y en la sección del Carrito de Compras, debe destacar un texto o banner claro que indique: "📍 Envíos a domicilio, entrega inmediata."
+
+3. ARQUITECTURA DEL PROYECTO (Preparación para entorno externo)
+Crea la estructura estándar con una carpeta public/ en la raíz.
+
+Deja la función de JavaScript completamente lista para leer dinámicamente un archivo llamado public/productos.csv usando fetch o PapaParse.
+
+NO proceses un CSV ahora. Para ahorrar recursos, incluye en el código un arreglo de prueba (Mock Data) con 4 productos de ejemplo para que la interfaz se visualice correctamente.
+
+4. COMPONENTES DE LA INTERFAZ
+Header: Nombre "Growth Store", buscador interactivo y botón de carrito con contador.
+
+Sidebar / Menú de Categorías: Crea un menú lateral (desplegable en móviles) que contenga EXACTAMENTE estas secciones/botones para filtrar:
+
+Todos los productos
+
+Termos y Vasos
+
+Auriculares
+
+Cables y Cargadores
+
+Parlantes
+
+Relojes
+
+Hogar y Bazar
+
+Juguetería y Niños
+
+Cuidado Personal
+
+Iluminación
+
+Herramientas y Seguridad
+
+Pilas y Baterías
+
+Grilla de Productos: Tarjetas con un box para la imagen (placeholder), nombre, categoría, descripción breve, precio destacado en verde lima (#B7D84B) y botón "Añadir al carrito". Incluye paginación.
+
+Carrito & WhatsApp: Modal con subtotal automático. El botón "Enviar Pedido" debe armar la URL de WhatsApp ([https://wa.me/](https://wa.me/)...) detallando el listado de los productos y agregando este mensaje final: "Solicito envío a domicilio en Córdoba Capital".
+
+5. ENTREGABLES
+Proyecto funcional en HTML, CSS y JavaScript (o React). Código modular y 100% responsivo, listo para ser descargado e inyectarle el catálogo real posteriormente.
