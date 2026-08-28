@@ -13,6 +13,12 @@ import {
   Lightbulb,
   Menu,
   MessageCircle,
+  MapPin,
+  CreditCard,
+  Banknote,
+  Map,
+  Truck,
+  Loader2,
   Minus,
   PackageCheck,
   Plus,
@@ -34,7 +40,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
-import { categories, loadProducts, type Product } from '@/lib/products';
+import { loadProducts, type Product } from '@/lib/products';
 
 type CartLine = Product & { quantity: number };
 
@@ -62,18 +68,11 @@ function BrandMark({ compact = false }: { compact?: boolean }) {
     <button
       type="button"
       onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-      className={`group flex items-center gap-2.5 text-left ${compact ? 'scale-90 origin-left' : ''}`}
+      className={`group flex items-center text-left transition-transform duration-200 hover:-translate-y-0.5 ${compact ? 'scale-90 origin-left' : ''}`}
       data-testid="button-brand-home"
       aria-label="Volver al inicio de Growth Store"
     >
-      <span className="relative flex size-10 shrink-0 items-center justify-center rounded-[13px] bg-[#171A18] shadow-[4px_4px_0_#B7D84B] transition-transform duration-200 group-hover:-translate-y-0.5">
-        <span className="absolute right-[8px] top-[7px] size-2 rounded-full bg-[#B7D84B]" />
-        <span className="font-mono-ui text-[18px] font-bold tracking-[-.15em] text-[#F5F3ED]">G</span>
-      </span>
-      <span className="leading-none">
-        <span className="block text-[18px] font-bold tracking-[-.06em] text-[#171A18]">growth</span>
-        <span className="font-mono-ui block text-[9px] font-bold uppercase tracking-[.22em] text-[#3E6B4F]">store</span>
-      </span>
+      <img src="./logo.jpeg" alt="Growth Store Logo" className="h-[50px] w-auto object-contain rounded-lg" />
     </button>
   );
 }
@@ -90,6 +89,14 @@ function LogisticsNote({ dark = false }: { dark?: boolean }) {
 }
 
 function ProductArtwork({ product }: { product: Product }) {
+  if (product.image && product.image.startsWith('http')) {
+    return (
+      <div className="relative flex h-[190px] items-center justify-center overflow-hidden rounded-[18px] bg-[#E7EBDE]" style={{ backgroundColor: product.accent }} aria-label={`Imagen ilustrativa de ${product.name}`}>
+        <img src={product.image} alt={product.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+        <span className="absolute bottom-3 left-3 font-mono-ui text-[9px] font-bold uppercase tracking-[.16em] text-[#171A18]/80 bg-[#F5F3ED]/70 px-2 py-0.5 rounded-full backdrop-blur-sm">growth / pick</span>
+      </div>
+    );
+  }
   const Icon = productIcon(product.image);
   return (
     <div className="relative flex h-[190px] items-center justify-center overflow-hidden rounded-[18px] bg-[#E7EBDE]" style={{ backgroundColor: product.accent }} aria-label={`Imagen ilustrativa de ${product.name}`}>
@@ -126,9 +133,9 @@ function ProductCard({ product, onAdd }: { product: Product; onAdd: (product: Pr
       <div className="flex flex-1 flex-col px-1.5 pb-1 pt-4">
         <p className="font-mono-ui text-[9px] font-bold uppercase tracking-[.13em] text-[#8A918B]" data-testid={`text-category-product-${product.id}`}>{product.category}</p>
         <h3 className="mt-1.5 text-[17px] font-bold leading-[1.08] tracking-[-.04em] text-[#171A18]" data-testid={`text-name-product-${product.id}`}>{product.name}</h3>
-        <p className="mt-2 min-h-8 text-[12px] leading-[1.35] text-[#68716A]">{product.description}</p>
+        <p className="mt-2 min-h-8 text-[12px] leading-[1.35] text-[#68716A] whitespace-pre-wrap">{product.description}</p>
         <div className="mt-4 flex items-end justify-between gap-2">
-          <p className="font-mono-ui text-[15px] font-bold text-[#3E6B4F]" data-testid={`text-price-product-${product.id}`}>{formatPrice(product.price)}</p>
+          <p className="font-mono-ui text-[15px] font-bold rounded bg-[#171A18] px-1.5 py-0.5 text-[#B7D84B]" data-testid={`text-price-product-${product.id}`}>{formatPrice(product.price)}</p>
           <span className="text-[10px] font-semibold text-[#8A918B]">IVA inc.</span>
         </div>
       </div>
@@ -157,66 +164,286 @@ function CartDrawer({ cart, onClose, onUpdate, onRemove }: {
   onUpdate: (id: string, quantity: number) => void;
   onRemove: (id: string) => void;
 }) {
+  const [step, setStep] = useState<'cart' | 'checkout'>('cart');
+  const [name, setName] = useState('');
+  const [address, setAddress] = useState('');
+  const deliveryInfo = useMemo(() => {
+    const now = new Date();
+    const day = now.getDay();
+    const hour = now.getHours();
+    
+    if (day === 0 || (day === 6 && hour >= 16)) {
+      return {
+        ui: '🚚 La entrega de tu pedido se realizará el LUNES de 16 a 20 hs.',
+        whatsapp: 'el LUNES de 16 a 20 hs'
+      };
+    } else if (hour >= 16) {
+      return {
+        ui: '🚚 La entrega de tu pedido se realizará MAÑANA de 16 a 20 hs.',
+        whatsapp: 'MAÑANA de 16 a 20 hs'
+      };
+    } else {
+      return {
+        ui: '🚚 La entrega de tu pedido se realizará HOY de 16 a 20 hs.',
+        whatsapp: 'HOY de 16 a 20 hs'
+      };
+    }
+  }, []);
+  const [paymentMethod, setPaymentMethod] = useState<'Transferencia' | 'Efectivo'>('Transferencia');
+
+  const [shippingCost, setShippingCost] = useState<number | null>(null);
+  const [shippingDistance, setShippingDistance] = useState<number | null>(null);
+  const [isCalculating, setIsCalculating] = useState(false);
+  const [shippingError, setShippingError] = useState('');
+  const [needsCoordination, setNeedsCoordination] = useState(false);
+
   const subtotal = cart.reduce((total, line) => total + line.price * line.quantity, 0);
-  const cartText = cart.map((line) => `${line.quantity} x ${line.name}`).join(', ');
-  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Hola Growth Store, quiero pedir: ${cartText}. Total estimado: ${formatPrice(subtotal)}.`)}`;
+  const finalTotal = subtotal + (shippingCost || 0);
+
+  const applyDistanceCost = (distanceKm: number) => {
+    setShippingDistance(distanceKm);
+    if (distanceKm <= 3.0) {
+      setShippingCost(1500);
+      setNeedsCoordination(false);
+    } else if (distanceKm <= 5.0) {
+      setShippingCost(5000);
+      setNeedsCoordination(false);
+    } else if (distanceKm <= 9.0) {
+      setShippingCost(7000);
+      setNeedsCoordination(false);
+    } else if (distanceKm <= 12.0) {
+      setShippingCost(9000);
+      setNeedsCoordination(false);
+    } else if (distanceKm <= 18.0) {
+      setShippingCost(12000);
+      setNeedsCoordination(false);
+    } else {
+      setShippingCost(0);
+      setNeedsCoordination(true);
+    }
+  };
+
+  const calculateDistance = async () => {
+    if (!address.trim()) {
+      setShippingError('Ingresá una dirección para calcular el envío.');
+      return;
+    }
+
+    setIsCalculating(true);
+    setShippingError('');
+    setShippingDistance(null);
+    setNeedsCoordination(false);
+    
+    try {
+      const originQuery = encodeURIComponent('Talma 2855, Córdoba, Argentina');
+      const originRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${originQuery}`);
+      const originData = await originRes.json();
+      if (!originData || originData.length === 0) {
+        throw new Error('No se pudo encontrar el origen.');
+      }
+      const { lat: lat_origen, lon: lon_origen } = originData[0];
+
+      const destQuery = encodeURIComponent(address + ', Córdoba, Argentina');
+      const destRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${destQuery}`);
+      const destData = await destRes.json();
+      if (!destData || destData.length === 0) {
+        throw new Error('No pudimos ubicar la dirección exacta.');
+      }
+      const { lat: lat_destino, lon: lon_destino } = destData[0];
+
+      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${lon_origen},${lat_origen};${lon_destino},${lat_destino}?overview=false`;
+      const osrmRes = await fetch(osrmUrl);
+      const osrmData = await osrmRes.json();
+      
+      if (osrmData.code !== 'Ok' || !osrmData.routes || osrmData.routes.length === 0) {
+        throw new Error('No pudimos calcular la ruta.');
+      }
+
+      const distanceKm = osrmData.routes[0].distance / 1000;
+      applyDistanceCost(distanceKm);
+    } catch (error: any) {
+      setShippingError('No se encontró la dirección exacta. El envío será a coordinar.');
+      setShippingCost(0);
+      setShippingDistance(null);
+      setNeedsCoordination(true);
+    } finally {
+      setIsCalculating(false);
+    }
+  };
+
+  const isCheckoutValid = name.trim() && address.trim() && (shippingDistance !== null || needsCoordination) && !isCalculating;
+
+  const getWhatsappUrl = () => {
+    const productsText = cart.map((line) => `- ${line.quantity}x ${line.name} (${formatPrice(line.price)})`).join('\\n');
+    const transferNote = paymentMethod === 'Transferencia' ? '\\n📎 Recordatorio: Por favor, enviá tu comprobante de transferencia respondiendo a este mensaje.' : '';
+    
+    const message = `🛒 *NUEVO PEDIDO - GROWTH STORE*
+👤 *Nombre:* ${name}
+📦 *Productos:* 
+${productsText}
+📍 *Dirección:* ${address}
+🚚 *Entrega:* ${deliveryInfo.whatsapp}
+📏 *Distancia:* ${shippingDistance !== null ? `${shippingDistance.toFixed(1)} km` : 'No calculada (A coordinar)'}
+💳 *Forma de pago:* ${paymentMethod}
+
+💵 *Subtotal:* ${formatPrice(subtotal)}
+🚚 *Envío:* ${needsCoordination ? 'A coordinar con el vendedor' : formatPrice(shippingCost || 0)}
+💰 *TOTAL A PAGAR:* ${needsCoordination ? 'A coordinar' : formatPrice(finalTotal)}
+${transferNote}`;
+
+    return `https://wa.me/5493512570174?text=${encodeURIComponent(message)}`;
+  };
+
   return (
     <>
       <button type="button" aria-label="Cerrar carrito" onClick={onClose} className="fixed inset-0 z-40 cursor-default bg-[#171A18]/35 backdrop-blur-[2px]" data-testid="button-close-cart-overlay" />
       <aside className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[430px] flex-col border-l border-[#D9DFD2] bg-[#F5F3ED] shadow-[-20px_0_60px_rgba(23,26,24,.16)] animate-drawer-in" aria-label="Carrito de compras" data-testid="drawer-cart">
         <div className="flex items-center justify-between border-b border-[#D9DFD2] px-5 py-5 sm:px-7">
-          <div>
-            <p className="font-mono-ui text-[10px] font-bold uppercase tracking-[.18em] text-[#8A918B]">Tu selección</p>
-            <h2 className="mt-1 text-2xl font-bold tracking-[-.06em] text-[#171A18]">Carrito</h2>
+          <div className="flex items-center gap-3">
+            {step === 'checkout' && (
+              <button type="button" onClick={() => setStep('cart')} className="flex size-8 items-center justify-center rounded-full bg-[#E7EBDE] text-[#3E6B4F] hover:bg-[#DCE9C2]" aria-label="Volver al carrito">
+                <ChevronLeft size={18} />
+              </button>
+            )}
+            <div>
+              <p className="font-mono-ui text-[10px] font-bold uppercase tracking-[.18em] text-[#8A918B]">{step === 'cart' ? 'Tu selección' : 'Paso final'}</p>
+              <h2 className="mt-1 text-2xl font-bold tracking-[-.06em] text-[#171A18]">{step === 'cart' ? 'Carrito' : 'Checkout'}</h2>
+            </div>
           </div>
           <button type="button" onClick={onClose} className="flex size-10 items-center justify-center rounded-full border border-[#D9DFD2] text-[#3E6B4F] transition-colors hover:bg-[#DCE9C2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3E6B4F]" aria-label="Cerrar carrito" data-testid="button-close-cart">
             <X size={19} />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-7">
-          <LogisticsNote />
-          {cart.length === 0 ? (
-            <div className="flex h-full min-h-[350px] flex-col items-center justify-center text-center">
-              <span className="flex size-16 items-center justify-center rounded-[22px] bg-[#DCE9C2] text-[#3E6B4F]"><ShoppingBag size={28} strokeWidth={1.6} /></span>
-              <h3 className="mt-5 text-lg font-bold tracking-[-.035em] text-[#171A18]">Tu carrito está vacío</h3>
-              <p className="mt-2 max-w-[230px] text-sm leading-relaxed text-[#68716A]">Sumá productos y armamos tu pedido por WhatsApp.</p>
-              <button type="button" onClick={onClose} className="mt-6 rounded-full bg-[#171A18] px-5 py-3 text-xs font-bold text-[#F5F3ED] transition-colors hover:bg-[#3E6B4F]" data-testid="button-continue-shopping">Ver productos</button>
-            </div>
-          ) : (
-            <div className="mt-6 space-y-3">
-              {cart.map((line) => (
-                <div key={line.id} className="flex gap-3 rounded-[16px] border border-[#D9DFD2] bg-[#FBFAF6] p-3" data-testid={`row-cart-${line.id}`}>
-                  <div className="flex size-[68px] shrink-0 items-center justify-center rounded-[12px]" style={{ backgroundColor: line.accent }}>
-                    {(() => { const Icon = productIcon(line.image); return <Icon size={29} strokeWidth={1.4} />; })()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="truncate text-sm font-bold text-[#171A18]">{line.name}</h3>
-                      <button type="button" onClick={() => onRemove(line.id)} className="text-[#8A918B] transition-colors hover:text-[#B4453E]" aria-label={`Quitar ${line.name}`} data-testid={`button-remove-cart-${line.id}`}><Trash2 size={15} /></button>
+        
+        {step === 'cart' ? (
+          <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-7">
+            <LogisticsNote />
+            {cart.length === 0 ? (
+              <div className="flex h-full min-h-[350px] flex-col items-center justify-center text-center">
+                <span className="flex size-16 items-center justify-center rounded-[22px] bg-[#DCE9C2] text-[#3E6B4F]"><ShoppingBag size={28} strokeWidth={1.6} /></span>
+                <h3 className="mt-5 text-lg font-bold tracking-[-.035em] text-[#171A18]">Tu carrito está vacío</h3>
+                <p className="mt-2 max-w-[230px] text-sm leading-relaxed text-[#68716A]">Sumá productos y armamos tu pedido por WhatsApp.</p>
+                <button type="button" onClick={onClose} className="mt-6 rounded-full bg-[#171A18] px-5 py-3 text-xs font-bold text-[#F5F3ED] transition-colors hover:bg-[#3E6B4F]" data-testid="button-continue-shopping">Ver productos</button>
+              </div>
+            ) : (
+              <div className="mt-6 space-y-3">
+                {cart.map((line) => (
+                  <div key={line.id} className="flex gap-3 rounded-[16px] border border-[#D9DFD2] bg-[#FBFAF6] p-3" data-testid={`row-cart-${line.id}`}>
+                    <div className="flex size-[68px] shrink-0 items-center justify-center rounded-[12px]" style={{ backgroundColor: line.accent }}>
+                      {(() => { const Icon = productIcon(line.image); return <Icon size={29} strokeWidth={1.4} />; })()}
                     </div>
-                    <p className="mt-1 font-mono-ui text-xs font-bold text-[#3E6B4F]">{formatPrice(line.price)}</p>
-                    <div className="mt-2 flex items-center gap-2">
-                      <button type="button" onClick={() => onUpdate(line.id, line.quantity - 1)} className="flex size-6 items-center justify-center rounded-md border border-[#D9DFD2] text-[#3E6B4F] hover:bg-[#DCE9C2]" aria-label="Reducir cantidad" data-testid={`button-decrease-cart-${line.id}`}><Minus size={12} /></button>
-                      <span className="font-mono-ui w-5 text-center text-xs font-bold" data-testid={`text-quantity-cart-${line.id}`}>{line.quantity}</span>
-                      <button type="button" onClick={() => onUpdate(line.id, line.quantity + 1)} className="flex size-6 items-center justify-center rounded-md border border-[#D9DFD2] text-[#3E6B4F] hover:bg-[#DCE9C2]" aria-label="Aumentar cantidad" data-testid={`button-increase-cart-${line.id}`}><Plus size={12} /></button>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="truncate text-sm font-bold text-[#171A18]">{line.name}</h3>
+                        <button type="button" onClick={() => onRemove(line.id)} className="text-[#8A918B] transition-colors hover:text-[#B4453E]" aria-label={`Quitar ${line.name}`} data-testid={`button-remove-cart-${line.id}`}><Trash2 size={15} /></button>
+                      </div>
+                      <p className="mt-1 font-mono-ui text-xs font-bold text-[#3E6B4F]">{formatPrice(line.price)}</p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <button type="button" onClick={() => onUpdate(line.id, line.quantity - 1)} className="flex size-6 items-center justify-center rounded-md border border-[#D9DFD2] text-[#3E6B4F] hover:bg-[#DCE9C2]" aria-label="Reducir cantidad" data-testid={`button-decrease-cart-${line.id}`}><Minus size={12} /></button>
+                        <span className="font-mono-ui w-5 text-center text-xs font-bold" data-testid={`text-quantity-cart-${line.id}`}>{line.quantity}</span>
+                        <button type="button" onClick={() => onUpdate(line.id, line.quantity + 1)} className="flex size-6 items-center justify-center rounded-md border border-[#D9DFD2] text-[#3E6B4F] hover:bg-[#DCE9C2]" aria-label="Aumentar cantidad" data-testid={`button-increase-cart-${line.id}`}><Plus size={12} /></button>
+                      </div>
                     </div>
                   </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-7">
+            <div className="space-y-5">
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-[#171A18]">Nombre y Apellido</label>
+                <div className="relative">
+                  <UserRound size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8A918B]" />
+                  <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej. Juan Pérez" className="h-11 w-full rounded-[12px] border border-[#C8D2C3] bg-[#FBFAF6] pl-10 pr-4 text-sm text-[#171A18] outline-none transition-all placeholder:text-[#8A918B] focus:border-[#3E6B4F] focus:ring-2 focus:ring-[#DCE9C2]" />
                 </div>
-              ))}
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-[#171A18]">Dirección de entrega</label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <MapPin size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8A918B]" />
+                    <input type="text" value={address} onChange={(e) => { setAddress(e.target.value); setShippingDistance(null); setShippingCost(null); }} placeholder="Ej. San Martín 123" className="h-11 w-full rounded-[12px] border border-[#C8D2C3] bg-[#FBFAF6] pl-10 pr-4 text-sm text-[#171A18] outline-none transition-all placeholder:text-[#8A918B] focus:border-[#3E6B4F] focus:ring-2 focus:ring-[#DCE9C2]" />
+                  </div>
+                  <button type="button" onClick={calculateDistance} disabled={!address.trim() || isCalculating} className="flex h-11 shrink-0 items-center gap-1.5 rounded-[12px] bg-[#3E6B4F] px-4 text-xs font-bold text-[#F5F3ED] transition-colors hover:bg-[#2C513A] disabled:opacity-50">
+                    {isCalculating ? <Loader2 size={15} className="animate-spin" /> : <Map size={15} />}
+                    Calcular
+                  </button>
+                </div>
+                {shippingError && <p className="mt-2 text-[11px] font-bold text-[#B4453E]">{shippingError}</p>}
+                {shippingDistance !== null && (
+                  <div className="mt-2 flex items-start gap-2 rounded-lg bg-[#DCE9C2]/50 p-2.5">
+                    <Truck size={14} className="mt-0.5 shrink-0 text-[#3E6B4F]" />
+                    <div>
+                      <p className="text-xs font-bold text-[#171A18]">Distancia: {shippingDistance.toFixed(1)} km</p>
+                      <p className="text-[11px] text-[#3E6B4F]">Costo: {needsCoordination ? 'A coordinar con el vendedor' : formatPrice(shippingCost || 0)}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-[#171A18]">Entrega Estimada</label>
+                <div className="flex items-center gap-2 rounded-[12px] border border-[#B7D84B] bg-[#DCE9C2]/30 p-3">
+                  <Clock3 size={16} className="text-[#3E6B4F] shrink-0" />
+                  <p className="text-xs font-bold text-[#3E6B4F]">{deliveryInfo.ui}</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-bold text-[#171A18]">Método de Pago</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className={`flex cursor-pointer items-center justify-center gap-2 rounded-[12px] border p-3 text-xs font-bold transition-all ${paymentMethod === 'Transferencia' ? 'border-[#B7D84B] bg-[#171A18] text-[#B7D84B]' : 'border-[#C8D2C3] bg-[#FBFAF6] text-[#68716A] hover:bg-[#E7EDDF]'}`}>
+                    <input type="radio" name="payment" value="Transferencia" className="sr-only" checked={paymentMethod === 'Transferencia'} onChange={() => setPaymentMethod('Transferencia')} />
+                    <CreditCard size={16} /> Transferencia
+                  </label>
+                  <label className={`flex cursor-pointer items-center justify-center gap-2 rounded-[12px] border p-3 text-xs font-bold transition-all ${paymentMethod === 'Efectivo' ? 'border-[#B7D84B] bg-[#171A18] text-[#B7D84B]' : 'border-[#C8D2C3] bg-[#FBFAF6] text-[#68716A] hover:bg-[#E7EDDF]'}`}>
+                    <input type="radio" name="payment" value="Efectivo" className="sr-only" checked={paymentMethod === 'Efectivo'} onChange={() => setPaymentMethod('Efectivo')} />
+                    <Banknote size={16} /> Efectivo
+                  </label>
+                </div>
+              </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
         {cart.length > 0 && (
           <div className="border-t border-[#D9DFD2] bg-[#FBFAF6] px-5 py-5 sm:px-7">
-            <div className="flex items-center justify-between text-sm text-[#68716A]">
-              <span>Subtotal</span>
-              <strong className="font-mono-ui text-lg text-[#171A18]" data-testid="text-cart-subtotal">{formatPrice(subtotal)}</strong>
-            </div>
-            <p className="mt-2 flex items-center gap-1.5 text-[11px] leading-relaxed text-[#8A918B]"><Clock3 size={13} /> Coordinamos el envío al confirmar.</p>
-            <a href={whatsappUrl} target="_blank" rel="noreferrer" className="mt-4 flex h-12 items-center justify-center gap-2 rounded-full bg-[#3E6B4F] text-sm font-bold text-[#F5F3ED] transition-all hover:bg-[#2C513A] hover:shadow-[0_6px_18px_rgba(62,107,79,.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7D84B] focus-visible:ring-offset-2" data-testid="link-whatsapp-order">
-              <MessageCircle size={18} /> Pedir por WhatsApp
-              <ArrowRight size={15} />
-            </a>
+            {step === 'cart' ? (
+              <>
+                <div className="flex items-center justify-between text-sm text-[#68716A]">
+                  <span>Subtotal</span>
+                  <strong className="font-mono-ui text-lg text-[#171A18]" data-testid="text-cart-subtotal">{formatPrice(subtotal)}</strong>
+                </div>
+                <p className="mt-2 flex items-center gap-1.5 text-[11px] leading-relaxed text-[#8A918B]"><Clock3 size={13} /> Coordinamos el envío al confirmar.</p>
+                <button type="button" onClick={() => setStep('checkout')} className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#3E6B4F] text-sm font-bold text-[#F5F3ED] transition-all hover:bg-[#2C513A] hover:shadow-[0_6px_18px_rgba(62,107,79,.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7D84B] focus-visible:ring-offset-2">
+                  <ShoppingBag size={18} /> Finalizar Pedido
+                  <ArrowRight size={15} />
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="space-y-1.5 border-b border-[#D9DFD2]/60 pb-3">
+                  <div className="flex items-center justify-between text-sm text-[#68716A]">
+                    <span>Productos</span>
+                    <strong className="font-mono-ui font-bold text-[#171A18]">{formatPrice(subtotal)}</strong>
+                  </div>
+                  <div className="flex items-center justify-between text-sm text-[#68716A]">
+                    <span>Envío</span>
+                    <strong className="font-mono-ui font-bold text-[#171A18]">{shippingDistance === null ? 'Pendiente' : needsCoordination ? 'A coordinar' : formatPrice(shippingCost || 0)}</strong>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-3 text-sm font-bold text-[#171A18]">
+                  <span>TOTAL A PAGAR</span>
+                  <strong className="font-mono-ui text-xl text-[#3E6B4F]">{needsCoordination && shippingDistance === null ? '---' : formatPrice(finalTotal)}</strong>
+                </div>
+                <a href={isCheckoutValid ? getWhatsappUrl() : '#'} target={isCheckoutValid ? '_blank' : undefined} rel="noreferrer" aria-disabled={!isCheckoutValid} onClick={(e) => !isCheckoutValid && e.preventDefault()} className={`mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-full text-sm font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7D84B] focus-visible:ring-offset-2 ${isCheckoutValid ? 'bg-[#171A18] text-[#B7D84B] hover:shadow-[0_6px_18px_rgba(23,26,24,.25)]' : 'cursor-not-allowed bg-[#E7EBDE] text-[#A6B2A8]'}`}>
+                  <MessageCircle size={18} /> Confirmar Pedido
+                </a>
+              </>
+            )}
           </div>
         )}
       </aside>
@@ -226,6 +453,7 @@ function CartDrawer({ cart, onClose, onUpdate, onRemove }: {
 
 function Home() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<string[]>(['Todos los productos']);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [search, setSearch] = useState('');
@@ -234,15 +462,18 @@ function Home() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [mobileCategories, setMobileCategories] = useState(false);
-  const pageSize = 4;
+  const pageSize = 24;
 
   const refreshProducts = () => {
     setLoading(true);
     setLoadError(false);
     let active = true;
-    loadProducts().then((items) => {
+    loadProducts().then((res) => {
       if (active) {
-        setProducts(items);
+        setProducts(res.products);
+        if (res.categories && res.categories.length > 1) {
+          setCategories(res.categories);
+        }
         setLoading(false);
       }
     }).catch(() => {
@@ -344,7 +575,7 @@ function Home() {
                 <CircleHelp size={17} className="text-[#3E6B4F]" />
                 <p className="mt-3 text-xs font-bold leading-snug text-[#171A18]">¿No encontrás lo que buscás?</p>
                 <p className="mt-1.5 text-[11px] leading-relaxed text-[#68716A]">Escribinos y lo rastreamos por vos.</p>
-                <a href="https://wa.me/?text=Hola%20Growth%20Store%2C%20estoy%20buscando%20un%20producto." target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-bold text-[#3E6B4F] hover:text-[#171A18]" data-testid="link-help-whatsapp">Consultar <ArrowRight size={12} /></a>
+                <a href="https://wa.me/5493512570174?text=Hola%20Growth%20Store%2C%20estoy%20buscando%20un%20producto." target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-bold text-[#3E6B4F] hover:text-[#171A18]" data-testid="link-help-whatsapp">Consultar <ArrowRight size={12} /></a>
               </div>
             </div>
           </aside>
